@@ -10,6 +10,7 @@ import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
   Bell,
   Bot,
+  Building2,
   Crown,
   GitBranch,
   LayoutDashboard,
@@ -116,7 +117,7 @@ import { useTranslations } from "next-intl";
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { profile, profileLoading, account, accountRole, signOut, canManageMembers } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   // Only surface the account-name strip when it actually carries
@@ -360,6 +361,27 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               sideOffset={6}
               className="min-w-56 bg-popover text-popover-foreground ring-border"
             >
+              <div className="border-b border-border px-2 py-1.5 mb-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {profile?.full_name ?? t("defaultUser")}
+                  </p>
+                  {accountRole && (
+                    <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary uppercase">
+                      {accountRole}
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {profile?.email ?? ""}
+                </p>
+                {account?.name && (
+                  <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                    <Building2 className="size-3 text-primary" />
+                    <span className="truncate">{account.name}</span>
+                  </p>
+                )}
+              </div>
               <DropdownMenuItem
                 render={
                   <Link
@@ -372,6 +394,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <User className="size-4" />
                 {t("menuProfile")}
               </DropdownMenuItem>
+              {canManageMembers && (
+                <DropdownMenuItem
+                  render={
+                    <Link
+                      href="/settings?tab=tenants"
+                      onClick={onClose}
+                      className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
+                    />
+                  }
+                >
+                  <Building2 className="size-4" />
+                  {t("menuTenants")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 render={
                   <Link

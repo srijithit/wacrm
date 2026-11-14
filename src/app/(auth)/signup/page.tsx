@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,13 +28,15 @@ export default function SignupPage() {
 }
 
 function SignupPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  // When the user lands here from `/join/<token>` we carry the
-  // invite token in the query so it survives the signup → email
-  // verification → redirect round-trip. `emailRedirectTo` below
-  // sends the verified user to /join/<token> so they land on the
-  // redeem step instead of being dropped on /dashboard.
   const inviteToken = searchParams.get("invite");
+
+  useEffect(() => {
+    if (!inviteToken) {
+      router.replace("/login");
+    }
+  }, [inviteToken, router]);
   const t = useTranslations("SignupPage");
 
   const [fullName, setFullName] = useState("");

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, Settings as SettingsIcon, User } from "lucide-react";
+import { Building2, LogOut, Menu, Settings as SettingsIcon, User } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -48,7 +48,7 @@ import { useTranslations } from "next-intl";
 export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { profile, account, accountRole, signOut, canManageMembers } = useAuth();
   const titleKey = getPageTitleKey(pathname);
 
   const initial =
@@ -102,12 +102,25 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           className="min-w-56 bg-popover text-popover-foreground ring-border"
         >
           <div className="px-2 py-1.5">
-            <p className="truncate text-sm font-medium text-foreground">
-              {profile?.full_name ?? t("defaultUser")}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-sm font-medium text-foreground">
+                {profile?.full_name ?? t("defaultUser")}
+              </p>
+              {accountRole && (
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary uppercase">
+                  {accountRole}
+                </span>
+              )}
+            </div>
             <p className="truncate text-xs text-muted-foreground">
               {profile?.email ?? ""}
             </p>
+            {account?.name && (
+              <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <Building2 className="size-3 text-primary" />
+                <span className="truncate">{account.name}</span>
+              </p>
+            )}
           </div>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem
@@ -121,6 +134,19 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             <User className="size-4" />
             {t("menuProfile")}
           </DropdownMenuItem>
+          {canManageMembers && (
+            <DropdownMenuItem
+              render={
+                <Link
+                  href="/settings?tab=tenants"
+                  className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
+                />
+              }
+            >
+              <Building2 className="size-4" />
+              {t("menuTenants")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             render={
               <Link

@@ -40,6 +40,7 @@
     "defaultUser": "사용자",
     "defaultAvatar": "아바타",
     "menuProfile": "프로필",
+    "menuTenants": "테넌트 및 워크스페이스",
     "menuSettings": "설정",
     "menuSignOut": "로그아웃"
   },
@@ -57,6 +58,7 @@
     "defaultUser": "사용자",
     "defaultAvatar": "아바타",
     "menuProfile": "프로필",
+    "menuTenants": "테넌트 및 워크스페이스",
     "menuSettings": "설정",
     "menuSignOut": "로그아웃"
   },
@@ -1969,6 +1971,7 @@
       "deals": "딜 & 통화",
       "inbox": "인박스",
       "members": "팀원",
+      "tenants": "테넌트 및 워크스페이스",
       "api": "API 키"
     },
     "groups": {

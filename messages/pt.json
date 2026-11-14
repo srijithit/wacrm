@@ -40,6 +40,7 @@
     "defaultUser": "Usuário",
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
+    "menuTenants": "Tenants e workspaces",
     "menuSettings": "Configurações",
     "menuSignOut": "Sair"
   },
@@ -57,6 +58,7 @@
     "defaultUser": "Usuário",
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
+    "menuTenants": "Tenants e workspaces",
     "menuSettings": "Configurações",
     "menuSignOut": "Sair"
   },
@@ -1969,6 +1971,7 @@
       "deals": "Negócios e moeda",
       "inbox": "Caixa de entrada",
       "members": "Membros da equipe",
+      "tenants": "Tenants e workspaces",
       "api": "Chaves de API"
     },
     "groups": {

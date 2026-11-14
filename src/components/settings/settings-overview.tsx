@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { Building2, ChevronRight, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { createClient } from '@/lib/supabase/client';
@@ -246,6 +246,16 @@ export function SettingsOverview({
             {tRoles(accountRole!)}
           </SettingsChip>
         ) : null}
+        {canManageMembers && (
+          <button
+            type="button"
+            onClick={() => onSelect('tenants')}
+            className="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted sm:inline-flex"
+          >
+            <Building2 className="size-3.5 text-primary" />
+            {tSections('tenants')}
+          </button>
+        )}
       </Card>
 
       {/* Status tiles */}
