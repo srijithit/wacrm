@@ -903,8 +903,9 @@ async function processMessage(
   // and never throws; the `.catch` is belt-and-braces so one trigger
   // type's failure can't skip the rest of the loop.
   const uniqueTriggers = Array.from(new Set(automationTriggers))
+  let automationReplied = false
   for (const triggerType of uniqueTriggers) {
-    await runAutomationsForTrigger({
+    const outcome = await runAutomationsForTrigger({
       accountId,
       triggerType,
       contactId: contactRecord.id,
@@ -915,23 +916,36 @@ async function processMessage(
         // trigger's exact-id match.
         interactive_reply_id: interactiveReplyId ?? undefined,
       },
-    }).catch((err) => console.error('[automations] dispatch failed:', err))
+    }).catch((err) => {
+      console.error('[automations] dispatch failed:', err)
+      return { executed: false, replied: false }
+    })
+    if (outcome?.replied) {
+      automationReplied = true
+    }
   }
 
-  // AI auto-reply. Runs only for plain-text inbound the deterministic
-  // flow runner did NOT consume (flows win over the LLM), and only when
-  // the account has enabled it. Awaited inside `after()` (same reason as
-  // the webhook dispatch below); `dispatchInboundToAiReply` owns its
-  // eligibility gates + try/catch and never throws.
-  if (!contentConsumed && !interactiveReplyId && inboundText.trim()) {
+  // AI auto-reply. Runs when:
+  // - Flow runner did NOT consume the message (flows win over the LLM).
+  // - No awaiting automation resumed and took the message as its reply.
+  // - No active automation replied immediately to this message.
+  // - Template quick-reply buttons (broadcast replies) stay out of AI auto-reply (#478).
+  // - The customer sent text (typed message body or tapped interactive menu item).
+  const isTemplateButton = message.type === 'button'
+  if (
+    !flowConsumed &&
+    !automationConsumed &&
+    !automationReplied &&
+    !isTemplateButton &&
+    inboundText.trim()
+  ) {
     await dispatchInboundToAiReply({
       accountId,
       conversationId: conversation.id,
       contactId: contactRecord.id,
       configOwnerUserId,
-      // Lets the bot show "typing…" (and mark the message read) while
-      // the reply is generated.
       inboundMessageId: message.id,
+      automationReplied: false,
     })
   }
 

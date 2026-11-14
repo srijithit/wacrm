@@ -70,7 +70,11 @@ export interface DispatchInput {
  * All errors are caught and logged; per-automation failures are
  * recorded into automation_logs with status='failed'.
  */
-export async function runAutomationsForTrigger(input: DispatchInput): Promise<void> {
+export async function runAutomationsForTrigger(
+  input: DispatchInput
+): Promise<{ executed: boolean; replied: boolean }> {
+  let executed = false
+  let replied = false
   try {
     const db = supabaseAdmin()
 
@@ -90,11 +94,11 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
         .maybeSingle()
       if (ownErr) {
         console.error('[automations] contact ownership check failed:', ownErr)
-        return
+        return { executed, replied }
       }
       if (!owned) {
         console.warn('[automations] contact not in account, refusing dispatch', input.contactId)
-        return
+        return { executed, replied }
       }
     }
 
@@ -113,14 +117,14 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
         .maybeSingle()
       if (convErr) {
         console.error('[automations] conversation ownership check failed:', convErr)
-        return
+        return { executed, replied }
       }
       if (!conv) {
         console.warn(
           '[automations] conversation not in account, refusing dispatch',
           input.context.conversation_id,
         )
-        return
+        return { executed, replied }
       }
     }
 
@@ -133,14 +137,16 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
 
     if (error) {
       console.error('[automations] fetch failed:', error)
-      return
+      return { executed, replied }
     }
-    if (!automations || automations.length === 0) return
+    if (!automations || automations.length === 0) return { executed, replied }
 
     for (const automation of automations as Automation[]) {
       if (!triggerMatches(automation, input.context)) continue
       try {
-        await executeAutomation(automation, input)
+        executed = true
+        const outcome = await executeAutomation(automation, input)
+        if (outcome?.replied) replied = true
       } catch (err) {
         console.error('[automations] execute failed:', automation.id, err)
       }
@@ -148,6 +154,7 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
   } catch (err) {
     console.error('[automations] dispatch failed:', err)
   }
+  return { executed, replied }
 }
 
 /**
@@ -418,7 +425,11 @@ export async function requeueStalledExecutions(now: Date = new Date()): Promise<
 // Internal execution
 // ------------------------------------------------------------
 
-async function executeAutomation(automation: Automation, input: DispatchInput) {
+async function executeAutomation(
+  automation: Automation,
+  input: DispatchInput
+): Promise<{ replied: boolean }> {
+  let replied = false
   const db = supabaseAdmin()
 
   const { data: log, error: logErr } = await db
@@ -449,7 +460,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
 
   if (logErr || !log) {
     console.error('[automations] cannot create log:', logErr)
-    return
+    return { replied }
   }
 
   await executeStepsFrom({
@@ -461,6 +472,9 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
     startPosition: 0,
     logId: log.id,
     triggerEvent: input.triggerType,
+    onMessageSent: () => {
+      replied = true
+    },
   })
 
   // Atomic counter update via the SQL function from migration 007.
@@ -473,6 +487,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
   if (rpcErr) {
     console.error('[automations] increment counter failed:', rpcErr)
   }
+  return { replied }
 }
 
 interface ExecuteArgs {
@@ -484,6 +499,7 @@ interface ExecuteArgs {
   startPosition: number
   logId: string | null
   triggerEvent: string
+  onMessageSent?: () => void
 }
 
 /**
@@ -599,6 +615,14 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<ScopeOutcome> {
       }
 
       const detail = await runStep(step, args)
+      if (
+        step.step_type === 'send_message' ||
+        step.step_type === 'send_buttons' ||
+        step.step_type === 'send_list' ||
+        step.step_type === 'send_template'
+      ) {
+        args.onMessageSent?.()
+      }
       if (waitsForReply(step)) {
         // Only park if there is actually a subsequent step or parent condition waiting for the reply
         const hasNextStep = (steps as AutomationStep[]).some((s) => s.position > step.position)

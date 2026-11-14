@@ -530,6 +530,27 @@ describe('inbound webhook: template quick-reply buttons (#478)', () => {
       interactive_reply_id: 'Track my order',
     })
   })
+
+  it('dispatches to AI auto-reply when an interactive list tap has no matching automation reply', async () => {
+    const listReplyMessage = {
+      id: 'wamid.LIST1',
+      from: '15551230000',
+      timestamp: '1700000000',
+      type: 'interactive',
+      interactive: {
+        type: 'list_reply',
+        list_reply: { id: 'row_1', title: 'WhatsApp CRM' },
+      },
+    }
+    await runWebhook(listReplyMessage)
+    expect(h.dispatchInboundToAiReply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        inboundMessageId: 'wamid.LIST1',
+        automationReplied: false,
+      }),
+    )
+  })
 })
 
 describe('inbound webhook: inbound media is mirrored (#466)', () => {

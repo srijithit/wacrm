@@ -26,6 +26,10 @@ interface DispatchArgs {
    *  a typing indicator (which also marks it read) is shown while the
    *  reply is generated. Optional so older callers keep working. */
   inboundMessageId?: string
+  /** Set by the webhook runner when an automation already replied to this inbound.
+   *  When false, the webhook runner confirmed no automation handled this message,
+   *  allowing the AI assistant to reply. When undefined, falls back to the legacy check. */
+  automationReplied?: boolean
 }
 
 /**
@@ -64,22 +68,22 @@ export async function dispatchInboundToAiReply(
     const config = await loadAiConfig(db, accountId)
     if (!config || !config.autoReplyEnabled) return
 
-    // Deterministic, user-configured responders win over the LLM — the
-    // caller already excludes messages a Flow consumed. Message-level
-    // automations (`new_message_received` / `keyword_match`) are
-    // dispatched independently for this same inbound and may send their
-    // own reply, so if the account has any active one we stand down to
-    // avoid double-texting the customer. (Relationship triggers like
-    // `first_inbound_message` don't count — they're not per-message
-    // auto-responders.)
-    const { data: autoResponders } = await db
-      .from('automations')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('is_active', true)
-      .in('trigger_type', ['new_message_received', 'keyword_match'])
-      .limit(1)
-    if (autoResponders && autoResponders.length > 0) return
+    // Deterministic, user-configured responders win over the LLM.
+    // If the webhook runner verified an automation replied to this message, stand down.
+    if (args.automationReplied === true) return
+
+    // If caller did not provide automationReplied (e.g. standalone tests/invocations),
+    // stand down if any message-level responder exists on the account.
+    if (args.automationReplied === undefined) {
+      const { data: autoResponders } = await db
+        .from('automations')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('is_active', true)
+        .in('trigger_type', ['new_message_received', 'keyword_match'])
+        .limit(1)
+      if (autoResponders && autoResponders.length > 0) return
+    }
 
     const { data: conv, error: convErr } = await db
       .from('conversations')

@@ -92,6 +92,7 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
   }
 
   let res: Response | undefined
+  const effectiveTimeout = timeoutMs && timeoutMs > 0 ? timeoutMs : 25000
   const maxAttempts = 3
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -102,7 +103,7 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(effectiveTimeout),
       })
     } catch (err) {
       if (attempt === maxAttempts) throw toNetworkError(err)

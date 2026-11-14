@@ -166,6 +166,13 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
   })
 
+  it('proceeds with AI reply when automationReplied is explicitly false even if automations exist', async () => {
+    h.state.autoResponders = [{ id: 'auto-1' }]
+    await dispatchInboundToAiReply({ ...ARGS, automationReplied: false })
+    expect(h.generateReply).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+  })
+
   it('does not send when the atomic slot claim loses the race', async () => {
     h.state.claim = false
     await dispatchInboundToAiReply(ARGS)
