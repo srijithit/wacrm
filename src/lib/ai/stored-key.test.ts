@@ -5,6 +5,7 @@ describe('canReuseStoredAiKey', () => {
   it('reuses the key for the same hosted provider', () => {
     expect(canReuseStoredAiKey({ provider: 'openai', base_url: null }, 'openai', null)).toBe(true)
     expect(canReuseStoredAiKey({ provider: 'anthropic', base_url: null }, 'anthropic', null)).toBe(true)
+    expect(canReuseStoredAiKey({ provider: 'gemini', base_url: null }, 'gemini', null)).toBe(true)
   })
 
   it('refuses when there is no stored config', () => {
