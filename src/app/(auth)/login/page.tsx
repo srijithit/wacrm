@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -87,11 +88,18 @@ function LoginPageInner() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          <div className="mb-3 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-[#040214] shadow-md ring-1 ring-border">
             {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary" />
+              <UsersRound className="size-7 text-primary" />
             ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
+              <Image
+                src="/logo-mark.png"
+                alt="Royaal CRM Logo"
+                width={56}
+                height={56}
+                className="size-full object-cover"
+                priority
+              />
             )}
           </div>
           <CardTitle className="text-xl text-foreground">

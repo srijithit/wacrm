@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -188,13 +189,25 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageSquare className="h-4 w-4" />
+          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+            <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#040214] ring-1 ring-border shadow-sm">
+              <Image
+                src="/logo-mark.png"
+                alt="Royaal CRM"
+                width={32}
+                height={32}
+                className="size-full object-cover"
+                priority
+              />
             </div>
-            <span className="text-sm font-semibold text-foreground">
-              {t("title")}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="truncate text-sm font-bold tracking-tight text-foreground leading-none">
+                {t("title")}
+              </span>
+              <span className="truncate text-[10px] text-muted-foreground leading-tight mt-0.5">
+                WhatsApp CRM
+              </span>
+            </div>
           </Link>
           <button
             type="button"

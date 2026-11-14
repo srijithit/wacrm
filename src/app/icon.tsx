@@ -1,16 +1,11 @@
 import { ImageResponse } from "next/og";
 
-// Replaces the default Next.js favicon with the brand mark — Hostinger
-// violet rounded square + white chat-square glyph — matching the
-// sidebar logo in `src/components/layout/sidebar.tsx`. Next.js renders
-// this at build time and auto-injects <link rel="icon"> into <head>.
-//
-// This route takes precedence over src/app/favicon.ico, which is the
-// Next.js default and can stay on disk harmlessly (or be removed).
-
+// Brand mark for Royaal CRM favicon / tab icon
 export const runtime = "edge";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
+
+const LOGO_DATA_URI = "data:image/png;base64,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";
 
 export default function Icon() {
   return new ImageResponse(
@@ -22,22 +17,19 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#7c3aed", // primary (Hostinger-aligned purple)
+          background: "#040214",
           borderRadius: 6,
+          overflow: "hidden",
         }}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={LOGO_DATA_URI}
+          alt="Royaal CRM"
+          width="32"
+          height="32"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
       </div>
     ),
     { ...size },
