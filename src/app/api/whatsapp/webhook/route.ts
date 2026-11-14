@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
-import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/meta-api'
+import { getMediaUrl, downloadMedia, sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { mirrorInboundMedia } from '@/lib/whatsapp/mirror-inbound-media'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import {
@@ -399,6 +399,7 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           // inserts that need it for NOT NULL FK compliance. Always
           // the admin who saved the WhatsApp config.
           config.user_id,
+          phoneNumberId,
           decryptedAccessToken,
           // Default ON: the column is NOT NULL DEFAULT TRUE, but a row
           // read before migration 039 lands would have it undefined,
@@ -587,6 +588,7 @@ async function processMessage(
   // (contacts, conversations). Always the admin who saved the
   // WhatsApp config; the choice is arbitrary post-017 but stable.
   configOwnerUserId: string,
+  phoneNumberId: string,
   accessToken: string,
   // Per-account opt-out for the inbound-media mirror (migration 039).
   // See parseMessageContent for what it turns off.
@@ -742,6 +744,20 @@ async function processMessage(
       message.id
     )
     return
+  }
+
+  // Mark message as read and show typing indicator to the customer on WhatsApp.
+  // This turns the sender's checkmarks blue and displays the native "typing..." status
+  // while the CRM, automations, flows, or AI process the reply.
+  // Best-effort: must never block or crash message processing if Meta fails.
+  try {
+    await sendTypingIndicator({
+      phoneNumberId,
+      accessToken,
+      messageId: message.id,
+    })
+  } catch (err) {
+    console.warn('[webhook] typing indicator / mark read failed:', err)
   }
 
   const isFirstInboundMessage = await claimFirstInboundMessage(

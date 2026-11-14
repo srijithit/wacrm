@@ -905,6 +905,56 @@ export async function sendTypingIndicator(
       typing_indicator: { type: 'text' },
     }),
   })
+  if (response.ok) return
+
+  // If typing_indicator fails on Meta's side, retry with plain status: 'read'
+  // so the blue tick (read receipt) is still delivered to the customer.
+  const fallbackResponse = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: messageId,
+    }),
+  }).catch(() => null)
+
+  if (fallbackResponse && fallbackResponse.ok) return
+
+  // Surface the original error from Meta if both failed
+  await throwMetaError(response, `Meta API error: ${response.status}`)
+}
+
+export interface MarkMessageReadArgs {
+  phoneNumberId: string
+  accessToken: string
+  messageId: string
+}
+
+/**
+ * Explicitly marks an inbound WhatsApp message as read without showing typing indicator.
+ * Displays double blue ticks to the customer.
+ */
+export async function markMessageAsRead(
+  args: MarkMessageReadArgs
+): Promise<void> {
+  const { phoneNumberId, accessToken, messageId } = args
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: messageId,
+    }),
+  })
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)
   }

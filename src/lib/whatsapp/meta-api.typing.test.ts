@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { sendTypingIndicator } from './meta-api'
+import { sendTypingIndicator, markMessageAsRead } from './meta-api'
 
 /**
  * Meta's typing indicator is a field on the read-status update: one
@@ -61,5 +61,55 @@ describe('sendTypingIndicator', () => {
     await expect(
       sendTypingIndicator({ ...BASE, messageId: 'wamid.bogus' }),
     ).rejects.toThrow('(#100) Invalid message id')
+  })
+
+  it('falls back to plain read status if typing_indicator is rejected', async () => {
+    const calls: Array<{ url: string; body: unknown }> = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        const parsedBody = JSON.parse(String(init.body))
+        calls.push({ url, body: parsedBody })
+        if (calls.length === 1) {
+          // First call with typing_indicator fails
+          return new Response(
+            JSON.stringify({ error: { message: '(#100) Param typing_indicator is not valid', code: 100 } }),
+            { status: 400 },
+          )
+        }
+        // Second call with plain read succeeds
+        return new Response(JSON.stringify({ success: true }), { status: 200 })
+      }),
+    )
+
+    await expect(
+      sendTypingIndicator({ ...BASE, messageId: 'wamid.inbound-1' }),
+    ).resolves.toBeUndefined()
+
+    expect(calls).toHaveLength(2)
+    expect(calls[0].body).toEqual({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: 'wamid.inbound-1',
+      typing_indicator: { type: 'text' },
+    })
+    expect(calls[1].body).toEqual({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: 'wamid.inbound-1',
+    })
+  })
+})
+
+describe('markMessageAsRead', () => {
+  it('posts the plain read status envelope', async () => {
+    await markMessageAsRead({ ...BASE, messageId: 'wamid.inbound-2' })
+    expect(capturedUrl).toBe('https://graph.facebook.com/v21.0/pn-1/messages')
+    expect(capturedInit?.method).toBe('POST')
+    expect(JSON.parse(String(capturedInit?.body))).toEqual({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: 'wamid.inbound-2',
+    })
   })
 })

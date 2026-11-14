@@ -242,6 +242,7 @@ vi.mock('@/lib/whatsapp/encryption', () => ({
 vi.mock('@/lib/whatsapp/meta-api', () => ({
   getMediaUrl: vi.fn(),
   downloadMedia: vi.fn(),
+  sendTypingIndicator: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock('@/lib/contacts/dedupe', () => ({
   findExistingContact: vi.fn(async () => ({
@@ -278,13 +279,14 @@ vi.mock('@/lib/whatsapp/message-status-sync', () => ({
 }))
 
 import { POST } from './route'
-import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/meta-api'
+import { getMediaUrl, downloadMedia, sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { findExistingContact } from '@/lib/contacts/dedupe'
 import { handleTemplateWebhookChange } from '@/lib/whatsapp/template-webhook'
 import { MAX_WEBHOOK_BODY_BYTES } from '@/lib/whatsapp/webhook-body'
 
 const mockGetMediaUrl = vi.mocked(getMediaUrl)
 const mockDownloadMedia = vi.mocked(downloadMedia)
+const mockSendTypingIndicator = vi.mocked(sendTypingIndicator)
 const mockFindExistingContact = vi.mocked(findExistingContact)
 
 const TEXT_MESSAGE = {
@@ -426,6 +428,11 @@ describe('inbound webhook: idempotent insert (#367)', () => {
     expect(h.state.rpcCalls).toHaveLength(1)
     expect(h.dispatchInboundToFlows).toHaveBeenCalledTimes(1)
     expect(h.dispatchWebhookEvent).toHaveBeenCalledTimes(1)
+    expect(mockSendTypingIndicator).toHaveBeenCalledWith({
+      phoneNumberId: 'pn-1',
+      accessToken: 'plain-token',
+      messageId: 'wamid.TEST1',
+    })
   })
 
   it('a replayed delivery is a no-op: no unread bump, no fan-out', async () => {
@@ -441,6 +448,13 @@ describe('inbound webhook: idempotent insert (#367)', () => {
     expect(h.runAutomationsForTrigger).not.toHaveBeenCalled()
     expect(h.dispatchInboundToAiReply).not.toHaveBeenCalled()
     expect(h.dispatchWebhookEvent).not.toHaveBeenCalled()
+    expect(mockSendTypingIndicator).not.toHaveBeenCalled()
+  })
+
+  it('tolerates sendTypingIndicator failure without failing the webhook', async () => {
+    mockSendTypingIndicator.mockRejectedValueOnce(new Error('Meta 500 error'))
+    await runWebhook()
+    expect(h.dispatchInboundToFlows).toHaveBeenCalledTimes(1)
   })
 })
 
