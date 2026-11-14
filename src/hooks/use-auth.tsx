@@ -124,6 +124,8 @@ interface AuthContextValue {
   isAgent: boolean;
   /** True if `accountRole === 'viewer'`. */
   isViewer: boolean;
+  /** True if the user is the SaaS platform superadmin (can manage all tenants and platform webhooks). */
+  isPlatformAdmin: boolean;
   /** True if the caller can manage members (admin+). */
   canManageMembers: boolean;
   /** True if the caller can edit account-wide settings (admin+). */
@@ -400,6 +402,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // dependencies downstream.
   const derived = useMemo(() => {
     const role = profile?.account_role ?? null;
+    const email = user?.email?.toLowerCase() ?? profile?.email?.toLowerCase() ?? '';
+    const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || 'srijith.v.2005@gmail.com')
+      .split(',')
+      .map((e) => e.trim().toLowerCase());
+    const isPlatformAdmin = Boolean(
+      (email && adminEmails.includes(email)) ||
+      (account?.name === 'Royaal Tech' && role === 'owner')
+    );
     return {
       accountRole: role,
       accountId: profile?.account_id ?? null,
@@ -407,11 +417,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: role === "admin",
       isAgent: role === "agent",
       isViewer: role === "viewer",
+      isPlatformAdmin,
       canManageMembers: role ? canManageMembersFor(role) : false,
       canEditSettings: role ? canEditSettingsFor(role) : false,
       canSendMessages: role ? canSendMessagesFor(role) : false,
     };
-  }, [profile?.account_role, profile?.account_id]);
+  }, [profile?.account_role, profile?.account_id, profile?.email, user?.email, account?.name]);
 
   // Signed out is not a broken account — the shell redirects to /login
   // before anything reads this.
@@ -478,6 +489,7 @@ export function useAuth(): AuthContextValue {
       isAdmin: false,
       isAgent: false,
       isViewer: false,
+      isPlatformAdmin: false,
       canManageMembers: false,
       canEditSettings: false,
       canSendMessages: false,

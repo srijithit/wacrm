@@ -36,7 +36,7 @@ export function SettingsOverview({
 }: {
   onSelect: (section: SettingsSection) => void;
 }) {
-  const { user, profile, accountId, accountRole, defaultCurrency, canManageMembers } =
+  const { user, profile, accountId, accountRole, defaultCurrency, canManageMembers, isPlatformAdmin } =
     useAuth();
   const { mode, theme } = useTheme();
   const t = useTranslations('Settings.overview');
@@ -246,7 +246,7 @@ export function SettingsOverview({
             {tRoles(accountRole!)}
           </SettingsChip>
         ) : null}
-        {canManageMembers && (
+        {isPlatformAdmin && (
           <button
             type="button"
             onClick={() => onSelect('tenants')}

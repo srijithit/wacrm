@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let mockUser = { id: "admin-1", email: "admin@royaal.com" };
+let mockAccountName = "Royaal Tech";
 let mockRole: string | null = "admin";
 let listTenantsResult: unknown[] = [];
 let switchAccountResult: unknown = { ok: true };
@@ -20,9 +21,10 @@ vi.mock("@/lib/auth/account", () => ({
     }
     return {
       userId: mockUser.id,
+      userEmail: mockUser.email,
       accountId: "acct-main",
       role: mockRole,
-      account: { id: "acct-main", name: "Royaal Tech" },
+      account: { id: "acct-main", name: mockAccountName },
       supabase: {
         rpc: vi.fn(async (fn: string) => {
           if (fn === "list_tenants") return { data: listTenantsResult, error: null };
@@ -46,9 +48,10 @@ vi.mock("@/lib/auth/account", () => ({
     }
     return {
       userId: mockUser.id,
+      userEmail: mockUser.email,
       accountId: "acct-main",
       role: mockRole,
-      account: { id: "acct-main", name: "Royaal Tech" },
+      account: { id: "acct-main", name: mockAccountName },
       supabase: {
         rpc: vi.fn(async (fn: string) => {
           if (fn === "list_tenants") return { data: listTenantsResult, error: null };
@@ -164,6 +167,7 @@ import { GET, POST, PUT, DELETE, PATCH } from "./route";
 describe("Multi-Tenant SaaS /api/account/tenants", () => {
   beforeEach(() => {
     mockUser = { id: "admin-1", email: "admin@royaal.com" };
+    mockAccountName = "Royaal Tech";
     mockRole = "admin";
     listTenantsResult = [
       {
@@ -343,5 +347,29 @@ describe("Multi-Tenant SaaS /api/account/tenants", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
+  });
+
+  it("GET /api/account/tenants returns empty list for customer (non-platform admin)", async () => {
+    mockUser = { id: "customer-1", email: "customer@client.com" };
+    mockAccountName = "Client Workspace";
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tenants).toEqual([]);
+  });
+
+  it("POST /api/account/tenants returns 403 for customer (non-platform admin)", async () => {
+    mockUser = { id: "customer-1", email: "customer@client.com" };
+    mockAccountName = "Client Workspace";
+    const req = new Request("http://localhost/api/account/tenants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Hacked Org" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("platform administrators");
   });
 });

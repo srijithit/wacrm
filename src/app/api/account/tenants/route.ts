@@ -5,9 +5,27 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit
 import { getAdminClient } from "@/lib/supabase/admin";
 import { encrypt } from "@/lib/whatsapp/encryption";
 
+export function isPlatformAdmin(ctx: {
+  userEmail?: string | null;
+  account?: { name: string };
+  role?: string;
+  userId: string;
+}): boolean {
+  const email = ctx.userEmail?.toLowerCase() ?? "";
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "srijith.v.2005@gmail.com")
+    .split(",")
+    .map((e) => e.trim().toLowerCase());
+  if (email && adminEmails.includes(email)) return true;
+  if (ctx.account?.name === "Royaal Tech") return true;
+  return false;
+}
+
 export async function GET() {
   try {
     const ctx = await getCurrentAccount();
+    if (!isPlatformAdmin(ctx)) {
+      return NextResponse.json({ tenants: [] });
+    }
     const { data, error } = await ctx.supabase.rpc("list_tenants");
     if (error) {
       console.error("[GET /api/account/tenants] rpc error:", error);
@@ -77,6 +95,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const ctx = await requireRole("admin");
+    if (!isPlatformAdmin(ctx)) {
+      return NextResponse.json({ error: "Only platform administrators can create client tenants" }, { status: 403 });
+    }
     const limit = checkRateLimit(`admin:create-tenant:${ctx.userId}`, RATE_LIMITS.adminAction);
     if (!limit.success) return rateLimitResponse(limit);
 
@@ -207,6 +228,9 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const ctx = await requireRole("admin");
+    if (!isPlatformAdmin(ctx)) {
+      return NextResponse.json({ error: "Only platform administrators can modify client tenants" }, { status: 403 });
+    }
     const limit = checkRateLimit(`admin:patch-tenant:${ctx.userId}`, RATE_LIMITS.adminAction);
     if (!limit.success) return rateLimitResponse(limit);
 
@@ -391,6 +415,9 @@ export async function PATCH(request: Request) {
 export async function PUT(request: Request) {
   try {
     const ctx = await getCurrentAccount();
+    if (!isPlatformAdmin(ctx)) {
+      return NextResponse.json({ error: "Only platform administrators can switch between tenant workspaces" }, { status: 403 });
+    }
     const body = await request.json().catch(() => null);
     const accountId = typeof body?.account_id === "string" ? body.account_id.trim() : "";
     if (!accountId) {
@@ -412,6 +439,9 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const ctx = await requireRole("admin");
+    if (!isPlatformAdmin(ctx)) {
+      return NextResponse.json({ error: "Only platform administrators can delete tenants" }, { status: 403 });
+    }
     const body = await request.json().catch(() => null);
     const accountId = typeof body?.account_id === "string" ? body.account_id.trim() : "";
     if (!accountId) {

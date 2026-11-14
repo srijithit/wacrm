@@ -48,7 +48,7 @@ import { useTranslations } from "next-intl";
 export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const pathname = usePathname();
-  const { profile, account, accountRole, signOut, canManageMembers } = useAuth();
+  const { profile, account, accountRole, signOut, canManageMembers, isPlatformAdmin } = useAuth();
   const titleKey = getPageTitleKey(pathname);
 
   const initial =
@@ -134,7 +134,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             <User className="size-4" />
             {t("menuProfile")}
           </DropdownMenuItem>
-          {canManageMembers && (
+          {isPlatformAdmin && (
             <DropdownMenuItem
               render={
                 <Link

@@ -74,6 +74,7 @@ export function WhatsAppConfig() {
     loading: authLoading,
     profileLoading,
     canEditSettings,
+    isPlatformAdmin,
   } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -849,35 +850,37 @@ export function WhatsAppConfig() {
           </CardContent>
         </Card>
 
-        {/* Webhook URL */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-foreground">{t('webhookTitle')}</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              {t('webhookDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('webhookUrl')}</Label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={webhookUrl}
-                  className="bg-muted border-border text-muted-foreground font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyWebhookUrl}
-                  className="shrink-0 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                >
-                  <Copy className="size-4" />
-                </Button>
+        {/* Webhook URL - only visible to Platform Admins */}
+        {isPlatformAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">{t('webhookTitle')}</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                {t('webhookDesc')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">{t('webhookUrl')}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={webhookUrl}
+                    className="bg-muted border-border text-muted-foreground font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopyWebhookUrl}
+                    className="shrink-0 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <Copy className="size-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attachment retention. Only meaningful once a number is
             connected, since it governs what the webhook does with

@@ -118,7 +118,7 @@ import { useTranslations } from "next-intl";
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut, canManageMembers } = useAuth();
+  const { profile, profileLoading, account, accountRole, signOut, canManageMembers, isPlatformAdmin } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   // Only surface the account-name strip when it actually carries
@@ -407,7 +407,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <User className="size-4" />
                 {t("menuProfile")}
               </DropdownMenuItem>
-              {canManageMembers && (
+              {isPlatformAdmin && (
                 <DropdownMenuItem
                   render={
                     <Link
