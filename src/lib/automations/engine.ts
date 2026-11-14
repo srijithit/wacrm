@@ -19,7 +19,8 @@ import type {
   AssignConversationStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
-import { addContactTagIfAbsent } from '@/lib/contacts/tag-write'
+import { addContactTagIfAbsent, removeContactTag } from '@/lib/contacts/tag-write'
+import { isUuid } from '@/lib/api/v1/pagination'
 import { MAX_TAG_CHAIN_DEPTH, getTagChainDepth } from '@/lib/contacts/tag-chain'
 import { engineSendText, engineSendTemplate, engineSendInteractive } from './meta-send'
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive'
@@ -810,22 +811,53 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
     case 'add_tag': {
       const cfg = step.step_config as TagStepConfig
       if (!args.contactId || !cfg.tag_id) throw new Error(tErr('needsContactAndTag', { step: 'add_tag' }))
+
+      let targetTagId = cfg.tag_id
+      if (!isUuid(targetTagId)) {
+        // Tag was specified by name (e.g. "new lead"). Look up or create it in this account.
+        const trimmed = targetTagId.trim()
+        const { data: existingTag } = await db
+          .from('tags')
+          .select('id')
+          .eq('account_id', args.automation.account_id)
+          .ilike('name', trimmed)
+          .maybeSingle()
+        if (existingTag?.id) {
+          targetTagId = existingTag.id
+        } else {
+          const { data: createdTag } = await db
+            .from('tags')
+            .insert({
+              name: trimmed,
+              account_id: args.automation.account_id,
+              user_id: args.automation.user_id,
+            })
+            .select('id')
+            .maybeSingle()
+          if (createdTag?.id) targetTagId = createdTag.id
+        }
+      }
+
+      if (!isUuid(targetTagId)) {
+        return `tag ${cfg.tag_id} could not be resolved to a UUID`
+      }
+
       const added = await addContactTagIfAbsent(db, {
         accountId: args.automation.account_id,
         contactId: args.contactId,
-        tagId: cfg.tag_id,
+        tagId: targetTagId,
       })
-      if (!added) return `tag ${cfg.tag_id} already present`
+      if (!added) return `tag ${targetTagId} already present`
 
       const depth = getTagChainDepth(args.context)
       if (depth >= MAX_TAG_CHAIN_DEPTH) {
         console.warn('[automations] tag_added chain depth limit reached', {
           automationId: args.automation.id,
           contactId: args.contactId,
-          tagId: cfg.tag_id,
+          tagId: targetTagId,
           depth,
         })
-        return `tag ${cfg.tag_id} added; tag_added dispatch skipped at depth ${depth}`
+        return `tag ${targetTagId} added; tag_added dispatch skipped at depth ${depth}`
       }
 
       await runAutomationsForTrigger({
@@ -834,14 +866,14 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         contactId: args.contactId,
         context: {
           ...args.context,
-          tag_id: cfg.tag_id,
+          tag_id: targetTagId,
           vars: {
             ...(args.context.vars ?? {}),
             _tag_chain_depth: depth + 1,
           },
         },
       })
-      return `tag ${cfg.tag_id} added and tag_added dispatched`
+      return `tag ${targetTagId} added and tag_added dispatched`
     }
 
     case 'remove_tag': {
@@ -849,12 +881,25 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       // ownership guard, since contact_tags carries no account_id.
       const cfg = step.step_config as TagStepConfig
       if (!args.contactId || !cfg.tag_id) throw new Error(tErr('needsContactAndTag', { step: 'remove_tag' }))
+
+      let targetTagId = cfg.tag_id
+      if (!isUuid(targetTagId)) {
+        const { data: existingTag } = await db
+          .from('tags')
+          .select('id')
+          .eq('account_id', args.automation.account_id)
+          .ilike('name', targetTagId.trim())
+          .maybeSingle()
+        if (existingTag?.id) targetTagId = existingTag.id
+        else return `tag ${cfg.tag_id} does not exist`
+      }
+
       await db
         .from('contact_tags')
         .delete()
         .eq('contact_id', args.contactId)
-        .eq('tag_id', cfg.tag_id)
-      return `tag ${cfg.tag_id} removed`
+        .eq('tag_id', targetTagId)
+      return `tag ${targetTagId} removed`
     }
 
     case 'assign_conversation': {
@@ -1085,18 +1130,35 @@ export function matchesWholeWord(
 }
 
 export function triggerMatches(automation: Automation, ctx: AutomationContext | undefined): boolean {
-  if (automation.trigger_type === 'keyword_match') {
+  const isKeywordFilter =
+    automation.trigger_type === 'keyword_match' ||
+    (automation.trigger_type === 'new_message_received' &&
+      Array.isArray((automation.trigger_config as KeywordMatchTriggerConfig)?.keywords) &&
+      (automation.trigger_config as KeywordMatchTriggerConfig).keywords.length > 0)
+
+  if (isKeywordFilter) {
     const cfg = automation.trigger_config as KeywordMatchTriggerConfig
     if (!cfg?.keywords || cfg.keywords.length === 0) return false
     const text = (ctx?.message_text ?? '').toString()
     if (!text) return false
+
+    // Expand any comma or dot separated keywords (e.g. "hi.hai" -> "hi", "hai")
+    const expandedKeywords: string[] = []
+    for (const raw of cfg.keywords) {
+      if (typeof raw === 'string') {
+        const parts = raw.split(/[,.]/).map((s) => s.trim()).filter(Boolean)
+        if (parts.length > 1) expandedKeywords.push(...parts)
+        expandedKeywords.push(raw.trim())
+      }
+    }
+
     if (cfg.match_type === 'word') {
-      return cfg.keywords.some((raw) =>
+      return expandedKeywords.some((raw) =>
         matchesWholeWord(text, raw, cfg.case_sensitive),
       )
     }
     const haystack = cfg.case_sensitive ? text : text.toLowerCase()
-    return cfg.keywords.some((raw) => {
+    return expandedKeywords.some((raw) => {
       const k = cfg.case_sensitive ? raw : raw.toLowerCase()
       return cfg.match_type === 'exact' ? haystack === k : haystack.includes(k)
     })

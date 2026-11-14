@@ -2394,13 +2394,13 @@
     "addRow": "Agregar fila",
     "addSection": "Agregar sección",
     "defaultListButton": "Menú",
-    "headerImage": "Imagen del encabezado (opcional)",
-    "headerImagePlaceholder": "Pega la URL de la imagen (PNG, JPG, WebP)...",
+    "headerImage": "Imagen de encabezado (opcional)",
+    "headerImagePlaceholder": "Pegar URL de imagen (PNG, JPG, WebP)...",
     "upload": "Subir",
     "uploading": "Subiendo...",
-    "imageUploaded": "Imagen subida correctamente",
+    "imageUploaded": "Imagen subida con éxito",
     "imageUploadFailed": "Error al subir la imagen",
-    "imageTooLarge": "La imagen debe pesar menos de 5 MB",
+    "imageTooLarge": "La imagen debe tener menos de 5 MB",
     "removeImage": "Eliminar imagen"
   },
   "DashboardShell": {
