@@ -9,6 +9,7 @@ function fakeDb(rows: unknown[]): SupabaseClient {
     from: () => chain,
     select: () => chain,
     eq: () => chain,
+    in: () => chain,
     order: () => chain,
     limit: () => Promise.resolve({ data: rows, error: null }),
   }
@@ -49,5 +50,19 @@ describe('buildConversationContext', () => {
       'conv-1',
     )
     expect(out).toEqual([{ role: 'user', content: 'real' }])
+  })
+
+  it('includes interactive selections with their title as user message', async () => {
+    const out = await buildConversationContext(
+      fakeDb([
+        { sender_type: 'customer', content_text: 'WhatsApp CRM' },
+        { sender_type: 'bot', content_text: 'Welcome to Royaal Tech!' },
+      ]),
+      'conv-1',
+    )
+    expect(out).toEqual([
+      { role: 'assistant', content: 'Welcome to Royaal Tech!' },
+      { role: 'user', content: 'WhatsApp CRM' },
+    ])
   })
 })

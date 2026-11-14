@@ -169,18 +169,6 @@ function LoginPageInner() {
               {loading ? t('signingIn') : t('signIn')}
             </Button>
           </form>
-
-          {inviteToken ? (
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              {t('noAccount')}{" "}
-              <Link
-                href={`/signup?invite=${encodeURIComponent(inviteToken)}`}
-                className="text-primary hover:text-primary/80"
-              >
-                {t('createAccount')}
-              </Link>
-            </p>
-          ) : null}
         </CardContent>
       </Card>
     </div>
