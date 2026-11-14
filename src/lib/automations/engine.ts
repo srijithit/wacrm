@@ -600,14 +600,19 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<ScopeOutcome> {
 
       const detail = await runStep(step, args)
       if (waitsForReply(step)) {
-        await parkForReply(step, args)
-        results.push({
-          step_id: step.id,
-          step_type: step.step_type,
-          status: 'success',
-          detail: `${detail}; waiting for reply`,
-        })
-        return suspend(args, results, errorMessage)
+        // Only park if there is actually a subsequent step or parent condition waiting for the reply
+        const hasNextStep = (steps as AutomationStep[]).some((s) => s.position > step.position)
+        const hasParent = args.parentStepId !== null
+        if (hasNextStep || hasParent) {
+          await parkForReply(step, args)
+          results.push({
+            step_id: step.id,
+            step_type: step.step_type,
+            status: 'success',
+            detail: `${detail}; waiting for reply`,
+          })
+          return suspend(args, results, errorMessage)
+        }
       }
       results.push({
         step_id: step.id,
@@ -1164,16 +1169,20 @@ export function triggerMatches(automation: Automation, ctx: AutomationContext | 
     })
   }
 
-  // Match on the tapped button / list-row id (exact). Lets multi-step
+  // Match on the tapped button / list-row id or button title. Lets multi-step
   // menus be chained: automation A sends buttons, automation B fires on
-  // the reply id and sends the next step.
+  // the reply id or title and sends the next step.
   if (automation.trigger_type === 'interactive_reply') {
     const cfg = automation.trigger_config as InteractiveReplyTriggerConfig
-    const replyId = ctx?.interactive_reply_id
-    if (!replyId || !Array.isArray(cfg?.reply_ids) || cfg.reply_ids.length === 0) {
+    const replyId = (ctx?.interactive_reply_id ?? '').toString().trim().toLowerCase()
+    const text = (ctx?.message_text ?? '').toString().trim().toLowerCase()
+    if ((!replyId && !text) || !Array.isArray(cfg?.reply_ids) || cfg.reply_ids.length === 0) {
       return false
     }
-    return cfg.reply_ids.includes(replyId)
+    return cfg.reply_ids.some((raw) => {
+      const clean = (raw ?? '').toString().trim().toLowerCase()
+      return (clean && replyId && clean === replyId) || (clean && text && clean === text)
+    })
   }
 
   if (automation.trigger_type === 'tag_added') {

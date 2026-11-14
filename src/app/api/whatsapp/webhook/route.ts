@@ -856,16 +856,18 @@ async function processMessage(
     | 'keyword_match'
     | 'interactive_reply'
   )[] = []
-  // Content-level triggers are suppressed when a flow or a waiting
-  // automation consumed the message — see the comment blocks above.
-  if (!contentConsumed) {
-    automationTriggers.push('new_message_received', 'keyword_match')
-    // Interactive tap → fire the interactive_reply trigger too (only
-    // meaningful when a button/list reply actually arrived). Enables
-    // automation-only chained menus; when a Flow owns the menu it will
-    // have consumed the reply and this is skipped.
+  // Content-level triggers: Flows win completely and suppress triggers.
+  // When no flow consumed the message:
+  // - Interactive tap → fire interactive_reply AND keyword_match (on button title).
+  //   Enables automation-only chained menus (e.g. "hi" buttons -> "Our Services" menu)
+  //   even if a previous automation resumed a non-messaging step.
+  // - Unconsumed inbound → fire new_message_received and keyword_match.
+  if (!flowConsumed) {
     if (interactiveReplyId) {
-      automationTriggers.push('interactive_reply')
+      automationTriggers.push('interactive_reply', 'keyword_match')
+    }
+    if (!contentConsumed) {
+      automationTriggers.push('new_message_received', 'keyword_match')
     }
   }
   // new_contact_created fires only when the webhook just auto-created the
@@ -884,7 +886,8 @@ async function processMessage(
   // logging zero steps. `runAutomationsForTrigger` owns its own try/catch
   // and never throws; the `.catch` is belt-and-braces so one trigger
   // type's failure can't skip the rest of the loop.
-  for (const triggerType of automationTriggers) {
+  const uniqueTriggers = Array.from(new Set(automationTriggers))
+  for (const triggerType of uniqueTriggers) {
     await runAutomationsForTrigger({
       accountId,
       triggerType,
