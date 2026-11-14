@@ -310,6 +310,7 @@ interface SendInteractiveButtonsEngineArgs {
   bodyText: string
   buttons: InteractiveButton[]
   headerText?: string
+  mediaUrl?: string
   footerText?: string
 }
 
@@ -402,6 +403,7 @@ async function sendInteractiveViaMeta(
         bodyText: input.bodyText,
         buttons: input.buttons,
         headerText: input.headerText,
+        mediaUrl: input.mediaUrl,
         footerText: input.footerText,
       })
       return r.messageId
@@ -461,6 +463,7 @@ async function sendInteractiveViaMeta(
           kind: 'buttons',
           body: input.bodyText,
           header: input.headerText,
+          media_url: input.mediaUrl,
           footer: input.footerText,
           buttons: input.buttons,
         }

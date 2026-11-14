@@ -380,6 +380,7 @@ export async function sendMessageToConversation(
           to: phone,
           bodyText: p.body,
           headerText: p.header || undefined,
+          mediaUrl: p.media_url || undefined,
           footerText: p.footer || undefined,
           buttons: p.buttons,
           contextMessageId,

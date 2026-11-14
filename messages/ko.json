@@ -2393,7 +2393,15 @@
     "rowDescriptionPlaceholder": "설명 (선택)",
     "addRow": "행 추가",
     "addSection": "섹션 추가",
-    "defaultListButton": "메뉴"
+    "defaultListButton": "메뉴",
+    "headerImage": "헤더 이미지 (선택)",
+    "headerImagePlaceholder": "이미지 URL 붙여넣기 (PNG, JPG, WebP)...",
+    "upload": "업로드",
+    "uploading": "업로드 중...",
+    "imageUploaded": "이미지가 성공적으로 업로드되었습니다",
+    "imageUploadFailed": "이미지 업로드 실패",
+    "imageTooLarge": "이미지 크기는 5MB 미만이어야 합니다",
+    "removeImage": "이미지 삭제"
   },
   "DashboardShell": {
     "loading": "불러오는 중..."

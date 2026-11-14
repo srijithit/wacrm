@@ -422,6 +422,7 @@ async function sendButtonsAndSuspend(
     contactId: run.contact_id!,
     bodyText: interpolateVars(cfg.text, run.vars),
     headerText: interpolateOptionalVars(cfg.header_text, run.vars),
+    mediaUrl: interpolateOptionalVars(cfg.media_url, run.vars),
     footerText: interpolateOptionalVars(cfg.footer_text, run.vars),
     buttons: cfg.buttons.map((b) => ({
       id: b.reply_id,

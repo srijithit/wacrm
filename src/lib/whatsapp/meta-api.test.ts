@@ -139,6 +139,38 @@ describe("sendInteractiveButtons — validation", () => {
       },
     });
   });
+
+  it("sends an image header payload shape when mediaUrl is supplied", async () => {
+    let captured: { body: unknown } | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        captured = {
+          body: JSON.parse(String(init.body)),
+        };
+        return new Response(
+          JSON.stringify({ messages: [{ id: "wamid.IMAGE_HEADER" }] }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    const result = await sendInteractiveButtons({
+      ...BASE_ARGS,
+      mediaUrl: "https://example.com/promo.png",
+      headerText: "Ignored text",
+      buttons: [{ id: "tap", title: "Tap" }],
+    });
+
+    expect(result).toEqual({ messageId: "wamid.IMAGE_HEADER" });
+    expect(captured!.body).toMatchObject({
+      type: "interactive",
+      interactive: {
+        type: "button",
+        header: { type: "image", image: { link: "https://example.com/promo.png" } },
+      },
+    });
+  });
 });
 
 describe("sendInteractiveList — validation", () => {

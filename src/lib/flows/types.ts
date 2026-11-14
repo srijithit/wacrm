@@ -36,6 +36,8 @@ export interface SendMessageNodeConfig {
 
 export interface SendButtonsNodeConfig {
   text: string;
+  /** Optional header image URL (PNG, JPG, WebP) or {{vars.X}}. When set, Meta sends an image header. */
+  media_url?: string;
   /** Optional header / footer lines around the buttons. */
   header_text?: string;
   footer_text?: string;

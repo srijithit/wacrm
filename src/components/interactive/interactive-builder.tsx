@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Image as ImageIcon, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { slugify } from "@/components/flows/shared";
 import { getT } from "@/lib/i18n/translate";
+import { uploadAccountMedia, MEDIA_MAX_BYTES_BY_KIND } from "@/lib/storage/upload-media";
 import { INTERACTIVE_LIMITS } from "@/lib/whatsapp/meta-api";
 import {
   validateInteractivePayload,
@@ -77,17 +79,48 @@ export function InteractiveBuilder({
   const [advanced, setAdvanced] = useState(false);
   const validation = validateInteractivePayload(value);
 
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const setField = (patch: Partial<InteractiveMessagePayload>) =>
     onChange({ ...value, ...patch } as InteractiveMessagePayload);
 
   const switchKind = (kind: "buttons" | "list") => {
     if (kind === value.kind) return;
-    const shared = { body: value.body, header: value.header, footer: value.footer };
+    const shared = {
+      body: value.body,
+      header: value.header,
+      footer: value.footer,
+      media_url: value.media_url,
+    };
     onChange(
       kind === "buttons"
         ? { ...blankButtonsPayload(), ...shared }
         : { ...blankListPayload(), ...shared },
     );
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.size > MEDIA_MAX_BYTES_BY_KIND.image) {
+      toast.error(t("imageTooLarge"));
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { publicUrl } = await uploadAccountMedia("flow-media", file);
+      setField({ media_url: publicUrl });
+      toast.success(t("imageUploaded"));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("imageUploadFailed");
+      toast.error(msg);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -124,6 +157,58 @@ export function InteractiveBuilder({
               className="min-h-20 bg-muted text-foreground"
             />
           </Field>
+
+          {value.kind === "buttons" && (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                <ImageIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span>{t("headerImage")}</span>
+              </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    value={value.media_url ?? ""}
+                    onChange={(e) =>
+                      setField({ media_url: e.target.value.trim() || undefined })
+                    }
+                    placeholder={t("headerImagePlaceholder")}
+                    className="bg-muted pr-8 text-foreground"
+                  />
+                  {value.media_url ? (
+                    <button
+                      type="button"
+                      onClick={() => setField({ media_url: undefined })}
+                      aria-label={t("removeImage")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0 gap-1.5 border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-950/30"
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {uploading ? t("uploading") : t("upload")}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Field

@@ -36,6 +36,8 @@ export interface InteractiveButtonsPayload {
   body: string
   /** Optional plain-text header (≤ 60 chars). */
   header?: string
+  /** Optional header image URL (PNG, JPG, WebP). When set, Meta sends an image header. */
+  media_url?: string
   /** Optional grey footer line (≤ 60 chars). */
   footer?: string
   /** 1–3 buttons. */
@@ -61,6 +63,7 @@ export interface InteractiveListPayload {
   kind: 'list'
   body: string
   header?: string
+  media_url?: string
   footer?: string
   /** Label of the tap-to-expand button on the message bubble (≤ 20 chars). */
   button_label: string

@@ -2393,7 +2393,15 @@
     "rowDescriptionPlaceholder": "Descrição (opcional)",
     "addRow": "Adicionar linha",
     "addSection": "Adicionar seção",
-    "defaultListButton": "Menu"
+    "defaultListButton": "Menu",
+    "headerImage": "Imagem do cabeçalho (opcional)",
+    "headerImagePlaceholder": "Cole o URL da imagem (PNG, JPG, WebP)...",
+    "upload": "Enviar",
+    "uploading": "Enviando...",
+    "imageUploaded": "Imagem enviada com sucesso",
+    "imageUploadFailed": "Falha ao enviar a imagem",
+    "imageTooLarge": "A imagem deve ter menos de 5 MB",
+    "removeImage": "Remover imagem"
   },
   "DashboardShell": {
     "loading": "Carregando..."
