@@ -62,7 +62,11 @@
     "menuProfile": "Perfil",
     "menuTenants": "Tenants e workspaces",
     "menuSettings": "Configurações",
-    "menuSignOut": "Sair"
+    "menuSignOut": "Sair",
+    "signOutConfirmTitle": "Sair da conta?",
+    "signOutConfirmDesc": "Tem certeza de que deseja sair da sua conta?",
+    "signOutConfirmYes": "Sim, sair",
+    "signOutConfirmNo": "Não, cancelar"
   },
   "Header": {
     "dashboard": "Painel",
@@ -80,7 +84,11 @@
     "menuProfile": "Perfil",
     "menuTenants": "Tenants e workspaces",
     "menuSettings": "Configurações",
-    "menuSignOut": "Sair"
+    "menuSignOut": "Sair",
+    "signOutConfirmTitle": "Sair da conta?",
+    "signOutConfirmDesc": "Tem certeza de que deseja sair da sua conta?",
+    "signOutConfirmYes": "Sim, sair",
+    "signOutConfirmNo": "Não, cancelar"
   },
   "ModeToggle": {
     "switchMode": "Mudar para o modo {mode}"

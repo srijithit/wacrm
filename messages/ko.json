@@ -62,7 +62,11 @@
     "menuProfile": "프로필",
     "menuTenants": "테넌트 및 워크스페이스",
     "menuSettings": "설정",
-    "menuSignOut": "로그아웃"
+    "menuSignOut": "로그아웃",
+    "signOutConfirmTitle": "로그아웃하시겠습니까?",
+    "signOutConfirmDesc": "계정에서 로그아웃하시겠습니까?",
+    "signOutConfirmYes": "예, 로그아웃",
+    "signOutConfirmNo": "아니요, 취소"
   },
   "Header": {
     "dashboard": "대시보드",
@@ -80,7 +84,11 @@
     "menuProfile": "프로필",
     "menuTenants": "테넌트 및 워크스페이스",
     "menuSettings": "설정",
-    "menuSignOut": "로그아웃"
+    "menuSignOut": "로그아웃",
+    "signOutConfirmTitle": "로그아웃하시겠습니까?",
+    "signOutConfirmDesc": "계정에서 로그아웃하시겠습니까?",
+    "signOutConfirmYes": "예, 로그아웃",
+    "signOutConfirmNo": "아니요, 취소"
   },
   "ModeToggle": {
     "switchMode": "{mode} 모드로 전환"

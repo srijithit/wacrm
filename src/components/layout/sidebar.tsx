@@ -3,11 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
+import { SignOutConfirmDialog } from "@/components/layout/sign-out-dialog";
 import {
   Bell,
   Bot,
@@ -119,6 +120,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut, canManageMembers, isPlatformAdmin } = useAuth();
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   // Only surface the account-name strip when it actually carries
@@ -435,7 +437,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
-                onClick={signOut}
+                onClick={() => setSignOutConfirmOpen(true)}
                 className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
               >
                 <LogOut className="size-4" />
@@ -445,6 +447,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </DropdownMenu>
         </div>
       </aside>
+
+      <SignOutConfirmDialog
+        open={signOutConfirmOpen}
+        onOpenChange={setSignOutConfirmOpen}
+        onConfirm={signOut}
+        title={t("signOutConfirmTitle")}
+        description={t("signOutConfirmDesc")}
+        confirmLabel={t("signOutConfirmYes")}
+        cancelLabel={t("signOutConfirmNo")}
+      />
     </>
   );
 }

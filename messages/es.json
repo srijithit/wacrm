@@ -62,7 +62,11 @@
     "menuProfile": "Perfil",
     "menuTenants": "Inquilinos y espacios",
     "menuSettings": "Configuración",
-    "menuSignOut": "Cerrar sesión"
+    "menuSignOut": "Cerrar sesión",
+    "signOutConfirmTitle": "¿Cerrar sesión?",
+    "signOutConfirmDesc": "¿Estás seguro de que deseas cerrar sesión en tu cuenta?",
+    "signOutConfirmYes": "Sí, cerrar sesión",
+    "signOutConfirmNo": "No, cancelar"
   },
   "Header": {
     "dashboard": "Panel",
@@ -80,7 +84,11 @@
     "menuProfile": "Perfil",
     "menuTenants": "Inquilinos y espacios",
     "menuSettings": "Configuración",
-    "menuSignOut": "Cerrar sesión"
+    "menuSignOut": "Cerrar sesión",
+    "signOutConfirmTitle": "¿Cerrar sesión?",
+    "signOutConfirmDesc": "¿Estás seguro de que deseas cerrar sesión en tu cuenta?",
+    "signOutConfirmYes": "Sí, cerrar sesión",
+    "signOutConfirmNo": "No, cancelar"
   },
   "ModeToggle": {
     "switchMode": "Cambiar al modo {mode}"

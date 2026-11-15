@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "@/components/layout/mode-toggle";
+import { SignOutConfirmDialog } from "@/components/layout/sign-out-dialog";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "dashboard",
@@ -49,6 +51,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const pathname = usePathname();
   const { profile, account, accountRole, signOut, canManageMembers, isPlatformAdmin } = useAuth();
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const titleKey = getPageTitleKey(pathname);
 
   const initial =
@@ -160,7 +163,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem
-            onClick={signOut}
+            onClick={() => setSignOutConfirmOpen(true)}
             className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
           >
             <LogOut className="size-4" />
@@ -169,6 +172,16 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <SignOutConfirmDialog
+        open={signOutConfirmOpen}
+        onOpenChange={setSignOutConfirmOpen}
+        onConfirm={signOut}
+        title={t("signOutConfirmTitle")}
+        description={t("signOutConfirmDesc")}
+        confirmLabel={t("signOutConfirmYes")}
+        cancelLabel={t("signOutConfirmNo")}
+      />
     </header>
   );
 }
