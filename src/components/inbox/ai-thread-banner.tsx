@@ -103,8 +103,9 @@ export function AiThreadBanner({
   // Account has no auto-reply → nothing to show. (Still loading → nothing.)
   if (!autoReplyOn) return null;
 
-  // Paused here (a human took over, or the model handed off).
-  if (paused) {
+  // Paused here (a human took over, an agent is assigned, or the model handed off).
+  const isPaused = paused || Boolean(assignedAgentId);
+  if (isPaused) {
     return (
       <Banner tone="muted">
         <div className="min-w-0 flex-1">
@@ -121,9 +122,6 @@ export function AiThreadBanner({
       </Banner>
     );
   }
-
-  // Active, but a human already owns it → the bot won't fire; no banner.
-  if (assignedAgentId) return null;
 
   // Active on this thread.
   return (
