@@ -9,7 +9,7 @@
     "emailLabel": "Email",
     "emailOrUsernameLabel": "Email or Username",
     "emailPlaceholder": "you@example.com",
-    "emailOrUsernamePlaceholder": "you@company.com",
+    "emailOrUsernamePlaceholder": "name@example.com",
     "passwordLabel": "Password",
     "forgotPassword": "Forgot password?",
     "passwordPlaceholder": "Enter your password",
