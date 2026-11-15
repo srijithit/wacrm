@@ -19,7 +19,11 @@ import {
   verifyTokenMatches,
 } from '@/lib/whatsapp/webhook-signature'
 import { readCappedBody } from '@/lib/whatsapp/webhook-body'
-import { resumeAwaitingReply, runAutomationsForTrigger } from '@/lib/automations/engine'
+import {
+  drainDuePendingExecutions,
+  resumeAwaitingReply,
+  runAutomationsForTrigger,
+} from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver'
@@ -271,6 +275,12 @@ export async function POST(request: Request) {
       await processWebhook(body)
     } catch (error) {
       console.error('Error processing webhook:', error)
+    }
+
+    try {
+      await drainDuePendingExecutions(10)
+    } catch (error) {
+      console.warn('[webhook] drainDuePendingExecutions failed:', error)
     }
   })
 

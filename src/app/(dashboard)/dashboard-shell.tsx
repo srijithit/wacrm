@@ -9,6 +9,7 @@ import { Header } from "@/components/layout/header";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 import { BrowserNotificationsListener } from "@/components/notifications/browser-notifications-listener";
+import { AutomationDrainPulse } from "@/components/automations/automation-drain-pulse";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -51,6 +52,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       {/* Desktop alerts for new customer messages (opt-in via Settings →
           Your profile). Headless — renders nothing. */}
       <BrowserNotificationsListener />
+      {/* Sweeps due automation wait steps (e.g. 3-minute follow-ups) on schedule. */}
+      <AutomationDrainPulse />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />

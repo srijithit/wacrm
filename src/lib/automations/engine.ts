@@ -421,6 +421,52 @@ export async function requeueStalledExecutions(now: Date = new Date()): Promise<
   return (data ?? []).length
 }
 
+/**
+ * Drain due `automation_pending_executions` rows where run_at <= now()
+ * and status = 'pending'. Safe to call from cron endpoints, webhooks, or background pulse.
+ */
+export async function drainDuePendingExecutions(limit = 50): Promise<number> {
+  const admin = supabaseAdmin()
+  const { data: due, error } = await admin
+    .from('automation_pending_executions')
+    .select('*')
+    .eq('status', 'pending')
+    .lte('run_at', new Date().toISOString())
+    .order('run_at', { ascending: true })
+    .limit(limit)
+
+  if (error) {
+    console.error('[automations] drain due executions query error:', error.message)
+    return 0
+  }
+  if (!due || due.length === 0) return 0
+
+  let processed = 0
+  for (const row of due) {
+    if (!(await claimPendingExecution(row.id as string))) continue
+
+    try {
+      await resumePendingExecution({
+        id: row.id as string,
+        automation_id: row.automation_id as string,
+        account_id: row.account_id as string,
+        user_id: row.user_id as string,
+        contact_id: (row.contact_id as string | null) ?? null,
+        log_id: (row.log_id as string | null) ?? null,
+        parent_step_id: (row.parent_step_id as string | null) ?? null,
+        branch: (row.branch as 'yes' | 'no' | null) ?? null,
+        next_step_position: row.next_step_position as number,
+        parked_step_id: (row.parked_step_id as string | null) ?? null,
+        context: (row.context as AutomationContext) ?? {},
+      })
+      processed++
+    } catch (err) {
+      console.error('[automations] resume failed for pending row', row.id, err)
+    }
+  }
+  return processed
+}
+
 // ------------------------------------------------------------
 // Internal execution
 // ------------------------------------------------------------

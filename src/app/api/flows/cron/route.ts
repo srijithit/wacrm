@@ -36,21 +36,30 @@ interface TimedOutRunRow {
  * tenants.
  */
 export async function GET(request: Request) {
-  const expected = process.env.AUTOMATION_CRON_SECRET
-  if (!expected) {
+  const cronSecret = process.env.AUTOMATION_CRON_SECRET || process.env.CRON_SECRET
+  if (!cronSecret) {
     return NextResponse.json({ error: 'cron not configured' }, { status: 503 })
   }
-  // Constant-time compare so an attacker who can hit the endpoint
-  // can't recover the secret byte-by-byte from response-time deltas.
-  // Length pre-check is required by timingSafeEqual (throws otherwise)
-  // and leaks only the length itself, which isn't sensitive.
-  const supplied = request.headers.get('x-cron-secret') ?? ''
-  const suppliedBuf = Buffer.from(supplied)
-  const expectedBuf = Buffer.from(expected)
-  if (
-    suppliedBuf.length !== expectedBuf.length ||
-    !timingSafeEqual(suppliedBuf, expectedBuf)
-  ) {
+  const supplied = request.headers.get('x-cron-secret')
+  const authHeader = request.headers.get('authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const token = (supplied || bearerToken) ?? ''
+
+  const suppliedBuf = Buffer.from(token)
+  const expectedBuf = Buffer.from(cronSecret)
+  let authorized = (
+    suppliedBuf.length === expectedBuf.length &&
+    timingSafeEqual(suppliedBuf, expectedBuf)
+  )
+
+  if (!authorized && process.env.AUTOMATION_CRON_SECRET) {
+    const fallbackBuf = Buffer.from(process.env.AUTOMATION_CRON_SECRET)
+    if (suppliedBuf.length === fallbackBuf.length && timingSafeEqual(suppliedBuf, fallbackBuf)) {
+      authorized = true
+    }
+  }
+
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
