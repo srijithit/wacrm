@@ -9,20 +9,21 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { MessageSquare, UsersRound } from "lucide-react";
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  Sparkles,
+  Bot,
+  Zap,
+  Layers,
+  ShieldCheck,
+} from "lucide-react";
 
-// `useSearchParams` opts the component out of static prerendering
-// unless it sits under a Suspense boundary. We split the form into
-// a child component so the outer page can prerender the chrome
-// (background, card frame) while the form hydrates with the query
-// string on the client.
 export default function LoginPage() {
   return (
     <Suspense fallback={null}>
@@ -33,13 +34,9 @@ export default function LoginPage() {
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
-  // Forwarded from `/join/<token>` when the visitor already has an
-  // account. After a successful sign-in we send them to the join
-  // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get("invite");
   const t = useTranslations("LoginPage");
-  // Set by /auth/callback when an emailed link (confirmation, password
-  // reset) could not be turned into a session — see src/lib/auth/callback.ts.
+
   const linkError = searchParams.get("error");
   const linkErrorMessage =
     linkError === "link_expired"
@@ -50,6 +47,8 @@ function LoginPageInner() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
@@ -59,25 +58,17 @@ function LoginPageInner() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (signInError) {
+      setError(signInError.message);
       setLoading(false);
       return;
     }
 
-    // Full-page navigation (not router.push) so the browser issues a
-    // fresh top-level request that carries the just-written Supabase
-    // auth cookies to the middleware gating /dashboard. A soft
-    // client-side navigation can reach the protected route before the
-    // server observes the new session, so the middleware bounces it
-    // back to /login — which looks like the page "just refreshing"
-    // instead of signing in (issue #365). Mirrors the deliberate full
-    // reload the invite-accept flow already uses in join/[token].
     const destination = inviteToken
       ? `/join/${encodeURIComponent(inviteToken)}`
       : "/dashboard";
@@ -85,92 +76,279 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border bg-card">
-        <CardHeader className="items-center text-center">
-          <div className="mb-3 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-[#040214] shadow-md ring-1 ring-border">
-            {inviteToken ? (
-              <UsersRound className="size-7 text-primary" />
-            ) : (
+    <div className="flex min-h-screen w-full flex-col bg-background lg:flex-row">
+      {/* Left Column: Premium SaaS Hero & Feature Showcase */}
+      <div className="relative hidden w-full flex-col justify-between overflow-hidden border-r border-purple-500/10 bg-gradient-to-br from-[#0c0414] via-[#15062b] to-[#260e42] p-8 text-white lg:flex lg:w-1/2 xl:w-[50%] xl:p-12 2xl:p-16">
+        {/* Ambient Gradient Glows */}
+        <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-purple-600/20 blur-[120px]" />
+        <div className="pointer-events-none absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-indigo-600/15 blur-[140px]" />
+        <div className="pointer-events-none absolute left-1/3 top-1/2 h-64 w-64 rounded-full bg-fuchsia-600/10 blur-[100px]" />
+
+        {/* Subtle grid background texture */}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:36px_36px]" />
+
+        {/* Top Header: Brand & Identity */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center overflow-hidden rounded-xl border border-purple-500/30 bg-[#080214] p-1.5 shadow-lg shadow-purple-950/50 ring-1 ring-white/10">
+            <Image
+              src="/logo-mark.png"
+              alt="Royaal CRM"
+              width={40}
+              height={40}
+              className="size-full object-contain"
+              priority
+            />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold tracking-tight text-white">
+              Royaal CRM
+            </span>
+            <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-purple-300/80">
+              AI WHATSAPP MARKETING &amp; COMMERCIAL AUTOMATION
+            </span>
+          </div>
+        </div>
+
+        {/* Center Section: Hero Copy & Feature Cards */}
+        <div className="relative z-10 my-auto py-8">
+          {/* Pill Badge */}
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/15 px-3.5 py-1.5 text-xs font-medium text-purple-200 shadow-sm backdrop-blur-md">
+            <Sparkles className="size-3.5 text-purple-300" />
+            <span>{t("platformBadge")}</span>
+          </div>
+
+          {/* Hero Headline */}
+          <h1 className="text-4xl font-extrabold leading-[1.12] tracking-tight text-white xl:text-5xl">
+            {t("heroTitle1")}{" "}
+            <span className="block bg-gradient-to-r from-purple-300 via-pink-300 to-indigo-300 bg-clip-text text-transparent">
+              {t("heroTitle2")}
+            </span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mt-4 max-w-lg text-sm leading-relaxed text-purple-200/70 xl:text-base">
+            {t("heroSubtitle")}
+          </p>
+
+          {/* Feature Highlights Grid */}
+          <div className="mt-8 flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* Card 1: 24/7 AI Concierge */}
+              <div className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition-all hover:border-purple-500/30 hover:bg-white/[0.07]">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                    <Bot className="size-4" />
+                  </div>
+                  <h3 className="text-xs font-semibold text-white xl:text-sm">
+                    {t("featureAiTitle")}
+                  </h3>
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-purple-200/60 xl:text-xs">
+                  {t("featureAiDesc")}
+                </p>
+              </div>
+
+              {/* Card 2: 1-Click Meta Signup */}
+              <div className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition-all hover:border-purple-500/30 hover:bg-white/[0.07]">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                    <Zap className="size-4" />
+                  </div>
+                  <h3 className="text-xs font-semibold text-white xl:text-sm">
+                    {t("featureMetaTitle")}
+                  </h3>
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-purple-200/60 xl:text-xs">
+                  {t("featureMetaDesc")}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Enterprise WhatsApp Cloud API Suite */}
+            <div className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition-all hover:border-purple-500/30 hover:bg-white/[0.07]">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                  <Layers className="size-4" />
+                </div>
+                <h3 className="text-xs font-semibold text-white xl:text-sm">
+                  {t("featureSuiteTitle")}
+                </h3>
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-purple-200/60 xl:text-xs">
+                {t("featureSuiteDesc")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Footer: Trust & Version */}
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-4 text-xs">
+          <div className="flex items-center gap-2 font-medium text-purple-300/70">
+            <ShieldCheck className="size-4 text-purple-400" />
+            <span>{t("certified")}</span>
+          </div>
+          <div className="font-mono text-purple-400/50">
+            {t("version")}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Authentication Form */}
+      <div className="flex w-full min-h-screen flex-1 items-center justify-center bg-background px-6 py-12 sm:px-10 lg:w-1/2 lg:px-12 xl:w-[50%] xl:px-16">
+        <div className="w-full max-w-md space-y-7">
+          {/* Mobile-Only Logo Header */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div className="flex size-11 items-center justify-center overflow-hidden rounded-xl border border-purple-500/30 bg-[#080214] p-1.5 shadow-md shadow-purple-950/30">
               <Image
                 src="/logo-mark.png"
-                alt="Royaal CRM Logo"
-                width={56}
-                height={56}
-                className="size-full object-cover"
+                alt="Royaal CRM"
+                width={40}
+                height={40}
+                className="size-full object-contain"
                 priority
               />
-            )}
+            </div>
+            <div>
+              <span className="text-lg font-bold text-foreground">
+                Royaal CRM
+              </span>
+              <p className="font-mono text-[9px] font-semibold uppercase text-muted-foreground">
+                Commercial WhatsApp CRM
+              </p>
+            </div>
           </div>
-          <CardTitle className="text-xl text-foreground">
-            {inviteToken ? t('titleAccept') : t('titleWelcome')}
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            {inviteToken
-              ? t('descAccept')
-              : t('descWelcome')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            {linkErrorMessage && !error && (
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-                {linkErrorMessage}
-              </div>
-            )}
-            {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-                {error}
-              </div>
-            )}
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-muted-foreground">
-                {t('emailLabel')}
+          {/* Form Header */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              {inviteToken ? t("titleAccept") : t("signInTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {inviteToken ? t("descAccept") : t("signInSubtitle")}
+            </p>
+          </div>
+
+          {/* Alerts */}
+          {linkErrorMessage && !error && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-300">
+              {linkErrorMessage}
+            </div>
+          )}
+          {error && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-xs text-red-400">
+              {error}
+            </div>
+          )}
+
+          {/* Sign In Form */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Email or Username Field */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-semibold text-foreground/90">
+                {t("emailOrUsernameLabel")}
               </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder={t('emailPlaceholder')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
-              />
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="text"
+                  placeholder={t("emailOrUsernamePlaceholder")}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="username"
+                  className="h-11 rounded-xl border-border bg-muted/30 pl-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600/30"
+                />
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password" className="text-muted-foreground">
-                {t('passwordLabel')}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t('passwordPlaceholder')}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
+            {/* Password Field with Show/Hide & Forgot Password */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-xs font-semibold text-foreground/90">
+                  {t("passwordLabel")}
+                </Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-purple-600 transition-colors hover:text-purple-500 dark:text-purple-400"
+                >
+                  {t("forgotPassword")}
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="h-11 rounded-xl border-border bg-muted/30 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="remember-me"
+                checked={rememberMe}
+                onCheckedChange={(val) => setRememberMe(Boolean(val))}
+                className="rounded border-border data-[checked]:border-purple-600 data-[checked]:bg-purple-600"
               />
-              {/* Below the input so Tab goes email -> password -> link. */}
-              <Link
-                href="/forgot-password"
-                className="self-end text-sm text-primary hover:text-primary/80"
+              <label
+                htmlFor="remember-me"
+                className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                {t('forgotPassword')}
-              </Link>
+                {t("rememberMe")}
+              </label>
             </div>
 
+            {/* Submit Button */}
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 font-semibold text-white shadow-md shadow-purple-600/25 transition-all hover:from-purple-500 hover:to-indigo-500 hover:shadow-lg hover:shadow-purple-600/35 disabled:opacity-50 sm:h-12"
             >
-              {loading ? t('signingIn') : t('signIn')}
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>{t("signingIn")}</span>
+                </>
+              ) : (
+                <>
+                  <span>{inviteToken ? t("signIn") : t("signInToDashboard")}</span>
+                  <ArrowRight className="size-4" />
+                </>
+              )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+
+          {/* Administrator / Onboarding Help Notice */}
+          <div className="space-y-4 pt-2 text-center">
+            <p className="text-xs text-muted-foreground">
+              {t("contactAdmin")}
+            </p>
+            <p className="text-[11px] text-muted-foreground/60">
+              {t("protectedBy")}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
