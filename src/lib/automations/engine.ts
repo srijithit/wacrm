@@ -141,8 +141,62 @@ export async function runAutomationsForTrigger(
     }
     if (!automations || automations.length === 0) return { executed, replied }
 
+    const incomingText = (input.context?.message_text ?? '').toLowerCase()
+    const incomingReplyId = (input.context?.interactive_reply_id ?? '').toLowerCase()
+    if (
+      input.contactId &&
+      (incomingText.includes('request call back') ||
+        incomingReplyId.includes('btn_1') ||
+        incomingReplyId.includes('call_back') ||
+        incomingReplyId.includes('callback'))
+    ) {
+      await cancelPendingFollowUpsForContact(input.accountId, input.contactId)
+    }
+
     for (const automation of automations as Automation[]) {
       if (!triggerMatches(automation, input.context)) continue
+
+      const isFollowUp =
+        automation.name?.toLowerCase().includes('follow-up') ||
+        automation.name?.toLowerCase().includes('follow up') ||
+        automation.name?.toLowerCase().includes('reminder')
+
+      if (isFollowUp && input.contactId) {
+        // If contact already has lead/callback tag, do not re-trigger follow-up reminders
+        const { data: ct } = await db
+          .from('contact_tags')
+          .select('tag_id, tags(name)')
+          .eq('contact_id', input.contactId)
+
+        const hasLeadTag = ct?.some((row: any) => {
+          const name = (row.tags?.name ?? '').toLowerCase()
+          return name.includes('lead') || name.includes('callback') || name.includes('call back')
+        })
+
+        if (hasLeadTag) {
+          continue
+        }
+
+        // Also check if conversation already concluded with callback response
+        if (input.context?.conversation_id) {
+          const { data: recentMsgs } = await db
+            .from('messages')
+            .select('content_text')
+            .eq('conversation_id', input.context.conversation_id)
+            .order('created_at', { ascending: false })
+            .limit(6)
+
+          const alreadyHandled = recentMsgs?.some((m: any) => {
+            const text = (m.content_text ?? '').toLowerCase()
+            return text.includes('thanks for your cooperation') || text.includes('contact you soon')
+          })
+
+          if (alreadyHandled) {
+            continue
+          }
+        }
+      }
+
       try {
         executed = true
         const outcome = await executeAutomation(automation, input)
@@ -195,6 +249,50 @@ export async function resumePendingExecution(pending: {
     await markPending(pending.id, 'expired')
     await setLogError(pending.log_id, tErr('pausedWhileWaiting'))
     return
+  }
+
+  // If this is a follow-up / reminder automation, check if contact already responded or requested callback
+  const isFollowUpAutomation =
+    (automation as Automation).name?.toLowerCase().includes('follow-up') ||
+    (automation as Automation).name?.toLowerCase().includes('follow up') ||
+    (automation as Automation).name?.toLowerCase().includes('reminder')
+
+  if (isFollowUpAutomation && pending.contact_id) {
+    // 1. Check if contact has "new lead" or callback tag
+    const { data: contactTags } = await db
+      .from('contact_tags')
+      .select('tag_id, tags(name)')
+      .eq('contact_id', pending.contact_id)
+
+    const hasCallbackTag = contactTags?.some((ct: any) => {
+      const name = (ct.tags?.name ?? '').toLowerCase()
+      return name.includes('lead') || name.includes('callback') || name.includes('call back')
+    })
+
+    if (hasCallbackTag) {
+      await markPending(pending.id, 'done')
+      return
+    }
+
+    // 2. Check if the conversation has already sent "Thanks for your cooperation" or received callback request
+    if (pending.context?.conversation_id) {
+      const { data: recentMsgs } = await db
+        .from('messages')
+        .select('content_text, created_at')
+        .eq('conversation_id', pending.context.conversation_id)
+        .order('created_at', { ascending: false })
+        .limit(6)
+
+      const alreadyHandled = recentMsgs?.some((m: any) => {
+        const text = (m.content_text ?? '').toLowerCase()
+        return text.includes('thanks for your cooperation') || text.includes('contact you soon')
+      })
+
+      if (alreadyHandled) {
+        await markPending(pending.id, 'done')
+        return
+      }
+    }
   }
 
   try {
@@ -467,6 +565,30 @@ export async function drainDuePendingExecutions(limit = 50): Promise<number> {
   return processed
 }
 
+/**
+ * Cancel/supersede any pending wait-step executions (such as 3-minute follow-ups)
+ * for a contact once they have converted, requested a call back, or completed their flow.
+ */
+export async function cancelPendingFollowUpsForContact(
+  accountId: string,
+  contactId: string,
+): Promise<number> {
+  const db = supabaseAdmin()
+  const { data, error } = await db
+    .from('automation_pending_executions')
+    .update({ status: 'superseded' })
+    .eq('account_id', accountId)
+    .eq('contact_id', contactId)
+    .eq('status', 'pending')
+    .select('id')
+
+  if (error) {
+    console.error('[automations] cancelPendingFollowUpsForContact error:', error.message)
+    return 0
+  }
+  return (data ?? []).length
+}
+
 // ------------------------------------------------------------
 // Internal execution
 // ------------------------------------------------------------
@@ -593,6 +715,18 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<ScopeOutcome> {
     if (step.step_type === 'wait') {
       const cfg = step.step_config as WaitStepConfig
       const ms = waitMs(cfg)
+
+      // Deduplicate: cancel any prior pending wait steps for the same contact & automation
+      if (args.contactId) {
+        await db
+          .from('automation_pending_executions')
+          .update({ status: 'superseded' })
+          .eq('account_id', args.automation.account_id)
+          .eq('contact_id', args.contactId)
+          .eq('automation_id', args.automation.id)
+          .eq('status', 'pending')
+      }
+
       const { error: waitErr } = await db.from('automation_pending_executions').insert({
         automation_id: args.automation.id,
         // Tenancy: account_id required NOT NULL post-017.
@@ -825,6 +959,13 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         contactId: args.contactId,
         text,
       })
+      if (
+        args.contactId &&
+        (text.toLowerCase().includes('thanks for your cooperation') ||
+          text.toLowerCase().includes('contact you soon'))
+      ) {
+        await cancelPendingFollowUpsForContact(args.automation.account_id, args.contactId)
+      }
       return `sent via Meta (${whatsapp_message_id})`
     }
 
@@ -948,6 +1089,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           },
         },
       })
+      await cancelPendingFollowUpsForContact(args.automation.account_id, args.contactId)
       return `tag ${targetTagId} added and tag_added dispatched`
     }
 
@@ -1259,6 +1401,26 @@ export function triggerMatches(automation: Automation, ctx: AutomationContext | 
     const cfg = automation.trigger_config as TagTriggerConfig
     const tagId = ctx?.tag_id
     return Boolean(tagId && cfg?.tag_id && cfg.tag_id === tagId)
+  }
+
+  // If this is a follow-up / reminder automation, do not trigger if the incoming message
+  // is responding to the callback / closing action (e.g. "Request call back")
+  const isFollowUpAutomation =
+    automation.name?.toLowerCase().includes('follow-up') ||
+    automation.name?.toLowerCase().includes('follow up') ||
+    automation.name?.toLowerCase().includes('reminder')
+
+  if (isFollowUpAutomation) {
+    const text = (ctx?.message_text ?? '').toString().trim().toLowerCase()
+    const replyId = (ctx?.interactive_reply_id ?? '').toString().trim().toLowerCase()
+    if (
+      text.includes('request call back') ||
+      replyId.includes('btn_1') ||
+      replyId.includes('call_back') ||
+      replyId.includes('callback')
+    ) {
+      return false
+    }
   }
 
   return true

@@ -505,6 +505,40 @@ describe("triggerMatches — interactive_reply", () => {
   });
 });
 
+describe("triggerMatches — follow-up reminder suppression on callback", () => {
+  function followUpAutomation(): Automation {
+    return {
+      id: "a1",
+      account_id: ACCOUNT,
+      user_id: "u1",
+      name: "Follow-up Reminder 3m",
+      trigger_type: "new_message_received",
+      trigger_config: {},
+      is_active: true,
+      execution_count: 0,
+      created_at: "",
+      updated_at: "",
+    };
+  }
+
+  it("suppresses follow-up trigger when customer clicks Request call back", () => {
+    expect(
+      triggerMatches(followUpAutomation(), {
+        message_text: "Request call back",
+        interactive_reply_id: "btn_1",
+      })
+    ).toBe(false);
+  });
+
+  it("allows normal inbound messages to trigger follow-up reminder", () => {
+    expect(
+      triggerMatches(followUpAutomation(), {
+        message_text: "Hello, I want to know more about the product",
+      })
+    ).toBe(true);
+  });
+});
+
 describe("triggerMatches — tag_added", () => {
   function automation(tagId?: string): Automation {
     return {
